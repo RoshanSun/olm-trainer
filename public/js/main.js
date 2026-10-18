@@ -1,8 +1,8 @@
 // Wiring: the tick clock, input, and the HUD.
 //
-// The clock runs on a fixed 600ms accumulator rather than requestAnimationFrame
-// alone, so a tick is a tick regardless of the monitor's refresh rate. Drawing
-// still happens every frame so movement and countdowns look alive.
+// The fight runs on a timer checked against the wall clock, so a tick is 600ms
+// regardless of refresh rate and regardless of whether the browser feels like
+// painting. Frames only make it look smooth. See the Loop section below.
 
 import { Engine } from '../shared/engine.js';
 import { TICK_MS, ROTATION } from '../shared/olm-data.js';
@@ -16,8 +16,6 @@ const renderer = new Renderer(canvas);
 
 let engine = null;
 let paused = false;
-let acc = 0;
-let last = 0;
 
 // --- Setup ------------------------------------------------------------------
 
@@ -38,8 +36,8 @@ function start() {
   // Open on the hand you actually start on.
   engine.setTarget('mageHand');
   paused = false;
-  acc = 0;
-  last = performance.now();
+  // Restarting resets the beat as well as the fight.
+  nextTickAt = performance.now() + TICK_MS;
   $('banner').hidden = true;
   $('pause').textContent = 'Pause';
   renderLog();
@@ -111,33 +109,62 @@ $('brew').addEventListener('click', () => engine?.running && engine.brew());
 $('restore').addEventListener('click', () => engine?.running && engine.restore());
 
 // --- Loop -------------------------------------------------------------------
+//
+// The clock is a timer, not an animation frame.
+//
+// It used to be driven entirely by requestAnimationFrame, including start-up,
+// and that turned out to be fragile in exactly the way that matters: rAF is
+// throttled whenever the browser decides the page is not worth painting -- an
+// occluded window, a background tab, some power settings -- and when it does
+// not fire, nothing happens at all. Measured in a real browser window, zero
+// frames fired in four seconds, so the fight never even initialised and the
+// board just sat there.
+//
+// So the fight runs on a timer, which keeps ticking regardless, and frames are
+// used only to make movement look smooth when they are available.
 
-function frame(now) {
-  requestAnimationFrame(frame);
-  if (!engine) return;
+let clock = null;
+let nextTickAt = 0;
 
-  if (!paused && engine.running) {
-    acc += now - last;
-    // Catch up if the tab was backgrounded, but never run away with it.
-    let budget = 6;
-    while (acc >= TICK_MS && budget-- > 0) {
-      acc -= TICK_MS;
+function startClock() {
+  if (clock !== null) return;
+  nextTickAt = performance.now() + TICK_MS;
+  // A short interval that checks the wall clock, rather than a 600ms interval
+  // that trusts it -- setInterval drifts, and a tick trainer cannot drift.
+  clock = setInterval(pump, 50);
+}
+
+function pump() {
+  const now = performance.now();
+  if (!paused && engine && engine.running) {
+    // Catch up if the timer was throttled, but never run away with it.
+    let budget = 4;
+    while (now >= nextTickAt && budget-- > 0) {
+      nextTickAt += TICK_MS;
       engine.tick();
     }
+    // Too far behind to catch up: resync rather than sprinting.
+    if (now - nextTickAt > TICK_MS * 8) nextTickAt = now + TICK_MS;
+  } else {
+    nextTickAt = now + TICK_MS;
   }
-  last = now;
+  render();
+}
 
+function render() {
+  if (!engine) return;
   renderer.resize();
   renderer.draw(engine);
   syncHud();
   if (!engine.running) showBanner();
 }
 
-requestAnimationFrame((t) => {
-  last = t;
-  start();
+// Frames are a bonus on top of the timer, never the thing the fight depends
+// on. If they are throttled the timer still drives both logic and drawing.
+function frame() {
   requestAnimationFrame(frame);
-});
+  render();
+}
 
 // A handle on the live fight, for the browser smoke check and for poking at a
 // run from the devtools console.
@@ -239,3 +266,12 @@ function showBanner() {
     <div class="stat">Seed <b>${s.seed}</b></div>
   `;
 }
+
+// --- Boot -------------------------------------------------------------------
+//
+// Last, so every function and `let` above is initialised before start() runs.
+// Module scripts are deferred, so the document is already parsed by here.
+
+start();
+startClock();
+requestAnimationFrame(frame);

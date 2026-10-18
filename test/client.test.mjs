@@ -94,15 +94,23 @@ globalThis.window = {
   removeEventListener: (type) => windowListeners.delete(type),
 };
 
-// Animation frames are pumped by hand so the clock is deterministic.
+// Frames and the interval clock are both pumped by hand, so the fight advances
+// deterministically and nothing keeps the Node process alive.
 const frameQueue = [];
 globalThis.requestAnimationFrame = (fn) => { frameQueue.push(fn); return frameQueue.length; };
+
+const intervals = [];
+globalThis.setInterval = (fn) => { intervals.push(fn); return intervals.length; };
+globalThis.clearInterval = () => {};
 
 let now = 0;
 globalThis.performance = { now: () => now };
 
+// Advancing time runs the interval callbacks the page registered, which is
+// what drives the fight, and then drains any queued frames.
 function pump(ms = 0) {
   now += ms;
+  for (const fn of intervals) fn();
   const due = frameQueue.splice(0, frameQueue.length);
   for (const fn of due) fn(now);
 }
@@ -114,28 +122,40 @@ byId('loadout').value = 'max-solo';
 
 const main = await import('../public/js/main.js');
 
-test('the page boots and starts a fight on load', () => {
-  // Gear options are populated at module load, before any frame runs.
+test('the page boots a fight at module load, without waiting for a frame', () => {
+  // Start-up must not depend on requestAnimationFrame: when frames are
+  // throttled the fight used to never begin at all.
   assert.ok(byId('loadout').children.length > 0, 'gear options were populated');
+  assert.ok(globalThis.olmTrainer?.engine, 'the engine exists before any frame has run');
 
-  pump(0); // the bootstrap frame calls start() and queues the first render
-  pump(0); // that render paints the HUD
+  pump(0);
   assert.equal(byId('hp-num').textContent, 99, 'the HUD rendered initial hitpoints');
   assert.ok(byId('olm-bars').innerHTML.includes('Mage hand'), 'Olm health bars rendered');
 });
 
+test('the fight advances on the timer even if no frame ever fires', () => {
+  const eng = globalThis.olmTrainer.engine;
+  const before = eng.tickCount;
+  // Drain frames first so only the interval can be responsible.
+  frameQueue.length = 0;
+  now += TICK_MS * 3;
+  for (const fn of intervals) fn();
+  assert.ok(eng.tickCount > before,
+    `ticks must advance without frames (was ${before}, now ${eng.tickCount})`);
+});
+
 test('the clock advances one tick per 600ms, not per frame', () => {
-  const ticksAt = () => Number(byId('rotation').innerHTML.length);
+  const eng = globalThis.olmTrainer.engine;
+
   // Many frames inside a single tick must not advance the fight.
-  const hpBefore = byId('hp-num').textContent;
+  const before = eng.tickCount;
   for (let i = 0; i < 5; i++) pump(50); // 250ms total
-  pump(0);
-  // Now cross several tick boundaries.
-  pump(TICK_MS * 6);
-  pump(0);
+  assert.equal(eng.tickCount, before, 'frames alone do not advance the fight');
+
+  // Crossing tick boundaries does.
+  pump(TICK_MS * 3);
+  assert.ok(eng.tickCount > before, 'time advances the fight');
   assert.ok(byId('phase-label').textContent.startsWith('Phase'), 'phase label is live');
-  assert.ok(ticksAt() > 0, 'the rotation strip rendered');
-  assert.ok(typeof hpBefore !== 'undefined');
 });
 
 test('keyboard input reaches the engine through the real handler', () => {

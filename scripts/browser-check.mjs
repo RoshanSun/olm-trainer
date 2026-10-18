@@ -108,18 +108,25 @@ f.onload = () => setTimeout(() => {
     check('click produced a path', eng.player.path.length > 0,
       'path length ' + eng.player.path.length);
 
-    // Drive the clock by hand. Headless Chrome advances timers but never
-    // produces frames, so requestAnimationFrame -- which is what paces the
-    // fight in a real browser -- never fires here. Ticking directly tests the
-    // click -> path -> movement chain, which is the part that can break.
-    for (let i = 0; i < 6 && eng.player.path.length; i++) eng.tick();
-    const moved = eng.player.x !== start.x || eng.player.y !== start.y;
-    check('character walks the path when the clock runs', moved,
-      'from ' + start.x + ',' + start.y + ' to ' + eng.player.x + ',' + eng.player.y);
-    check('character reached the clicked tile', eng.player.x === targetX && eng.player.y === targetY,
-      'at ' + eng.player.x + ',' + eng.player.y + ' wanted ' + targetX + ',' + targetY);
-
-    document.title = results.join(' | ');
+    // Headless advances timers but never produces frames, which is exactly
+    // the condition that broke the page: the clock hung off
+    // requestAnimationFrame, so with no frames nothing ran at all. Letting
+    // real time pass here and watching the fight advance on its own is the
+    // regression guard for that.
+    const ticksBefore = eng.tickCount;
+    setTimeout(() => {
+      try {
+        check('fight advances on its own without any frames', eng.tickCount > ticksBefore,
+          'ticks ' + ticksBefore + ' -> ' + eng.tickCount);
+        const moved = eng.player.x !== start.x || eng.player.y !== start.y;
+        check('character walks to the clicked tile', moved,
+          'from ' + start.x + ',' + start.y + ' to ' + eng.player.x + ',' + eng.player.y);
+        check('character reached the clicked tile',
+          eng.player.x === targetX && eng.player.y === targetY,
+          'at ' + eng.player.x + ',' + eng.player.y + ' wanted ' + targetX + ',' + targetY);
+        document.title = results.join(' | ');
+      } catch (err) { fail(String(err && err.message || err)); }
+    }, 3000);
   } catch (err) {
     fail(String(err && err.message || err));
   }
