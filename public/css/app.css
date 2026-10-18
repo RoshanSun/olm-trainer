@@ -19,6 +19,13 @@
 
 * { box-sizing: border-box; }
 
+/* The hidden attribute only sets display:none in the browser's own stylesheet,
+   which any author rule outranks. .banner sets display:grid, so the end-of-fight
+   overlay stayed laid out over the whole arena while "hidden" and swallowed
+   every click on the board. Stating it here, once, keeps that from happening
+   again to anything else that uses the attribute. */
+[hidden] { display: none !important; }
+
 /* The arena has to be visible without scrolling -- you cannot practise
    positioning if you have to scroll to find your own character. The page is a
    fixed-height column: bar, main, footer, with main taking whatever is left

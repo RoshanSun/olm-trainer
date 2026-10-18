@@ -139,6 +139,13 @@ requestAnimationFrame((t) => {
   requestAnimationFrame(frame);
 });
 
+// A handle on the live fight, for the browser smoke check and for poking at a
+// run from the devtools console.
+globalThis.olmTrainer = {
+  get engine() { return engine; },
+  renderer,
+};
+
 // --- HUD --------------------------------------------------------------------
 
 let lastLogLen = 0;

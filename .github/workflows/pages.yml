@@ -40,6 +40,14 @@ jobs:
       - name: Test
         run: npm test
 
+      # Unit tests run against a fake DOM and cannot see layout or hit
+      # testing. This drives the real page in headless Chrome, which is what
+      # catches an overlay eating clicks or a board running off the screen.
+      - name: Browser check
+        run: npm run check:browser
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+
       - name: Build
         run: npm run build
 
