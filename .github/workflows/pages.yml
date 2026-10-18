@@ -1,0 +1,60 @@
+# Builds the static trainer and publishes it to GitHub Pages.
+#
+# The simulator is entirely client-side, so the Pages deploy is the whole
+# application -- there is no server half left behind, unlike a project with a
+# live multiplayer component.
+#
+# Pages on a Free account requires the repository to be public. If the repo is
+# private, either make it public or use a static host that serves private
+# repos (Render, Cloudflare Pages, Netlify) -- the build output is the same.
+
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # No dependencies to install, but the tests gate the deploy: a broken
+      # build should never reach the published page.
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

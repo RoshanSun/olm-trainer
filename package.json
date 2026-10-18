@@ -9,7 +9,7 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "build": "node scripts/build-static.mjs",
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test --import ./test/register.mjs \"test/*.test.mjs\""
   },
   "engines": {
     "node": ">=18"
