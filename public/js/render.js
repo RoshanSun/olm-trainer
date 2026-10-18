@@ -31,9 +31,31 @@ export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.tile = Math.floor(Math.min(canvas.width / GRID_W, canvas.height / GRID_H));
-    this.ox = Math.floor((canvas.width - this.tile * GRID_W) / 2);
-    this.oy = Math.floor((canvas.height - this.tile * GRID_H) / 2);
+    this.resize();
+  }
+
+  // Matches the backing store to the size the canvas is actually displayed at,
+  // scaled by the device pixel ratio. Without this the browser stretches a
+  // fixed-size bitmap to fit the box and the grid lines go soft; with it the
+  // arena is sharp at any window size and the tiles stay square.
+  resize() {
+    const rect = this.canvas.getBoundingClientRect?.();
+    const dpr = globalThis.devicePixelRatio || 1;
+
+    // Before first layout the box can measure zero, so fall back to the
+    // canvas's declared size rather than dividing by nothing.
+    const cssW = rect?.width || this.canvas.width || GRID_W * 60;
+    const cssH = rect?.height || this.canvas.height || GRID_H * 60;
+
+    const w = Math.max(1, Math.round(cssW * dpr));
+    const h = Math.max(1, Math.round(cssH * dpr));
+    if (this.canvas.width !== w) this.canvas.width = w;
+    if (this.canvas.height !== h) this.canvas.height = h;
+
+    this.tile = Math.floor(Math.min(w / GRID_W, h / GRID_H));
+    this.ox = Math.floor((w - this.tile * GRID_W) / 2);
+    this.oy = Math.floor((h - this.tile * GRID_H) / 2);
+    return this;
   }
 
   // Screen point -> tile. Used by the click handler.

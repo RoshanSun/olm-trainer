@@ -56,6 +56,10 @@ function togglePause() {
 
 // --- Input ------------------------------------------------------------------
 
+// Re-fit the arena whenever the window changes shape, so the board is always
+// whole on screen without scrolling.
+window.addEventListener('resize', () => renderer.resize());
+
 canvas.addEventListener('click', (ev) => {
   if (!engine || !engine.running) return;
   const { x, y } = renderer.tileAt(ev.clientX, ev.clientY);
@@ -123,6 +127,7 @@ function frame(now) {
   }
   last = now;
 
+  renderer.resize();
   renderer.draw(engine);
   syncHud();
   if (!engine.running) showBanner();
