@@ -89,10 +89,13 @@ button.primary { background: var(--accent); color: #1a1500; border-color: var(--
 main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  /* The explicit row is load-bearing. Without it the row is auto-sized to its
+     content, which leaves .stage with an indefinite height -- and a percentage
+     max-height against an indefinite height resolves to none, so the canvas
+     silently ignored its cap and rendered at full intrinsic size. */
+  grid-template-rows: minmax(0, 1fr);
   gap: 16px;
   padding: 16px;
-  /* flex:1 with min-height:0 is what lets main shrink instead of overflowing
-     the viewport -- without the min-height a grid child refuses to shrink. */
   flex: 1;
   min-height: 0;
 }
@@ -100,22 +103,25 @@ main {
 .stage {
   position: relative;
   min-height: 0;
+  height: 100%;
   display: grid;
   place-items: center;
 }
 
-/* max-width and max-height together on a canvas keep its aspect ratio while
-   fitting whichever side runs out first, so the board is always whole. */
+/* The canvas is sized in JS, not here. Pure CSS could not be made to do it:
+   with an intrinsic size plus aspect-ratio, a percentage max-height is ignored
+   and the board rendered full size no matter how short the window got. The
+   renderer measures .stage and sets an exact pixel size instead, which also
+   gives whole-number tiles and so a crisper grid.
+
+   The edge is an outline rather than a border on purpose -- an outline sits
+   outside layout, so it cannot feed back into the measured box. */
 canvas {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  aspect-ratio: 13 / 12;
-  background: #0c0e14;
-  border: 1px solid var(--line);
-  border-radius: 6px;
   display: block;
+  background: #0c0e14;
+  outline: 1px solid var(--line);
+  outline-offset: -1px;
+  border-radius: 6px;
   cursor: crosshair;
 }
 

@@ -9,6 +9,11 @@ import {
   GRID_W, GRID_H, HEAD, MAGE_HAND, MELEE_HAND, ZONE_BOUNDS, isWalkable,
 } from '../shared/room.js';
 
+// Fallbacks for when the container has not been laid out yet, and a floor so
+// the board stays usable in a very short window instead of collapsing.
+const DEFAULT_TILE = 56;
+const MIN_TILE = 14;
+
 const COLORS = {
   floor: '#171a24',
   floorAlt: '#141720',
@@ -34,25 +39,44 @@ export class Renderer {
     this.resize();
   }
 
-  // Matches the backing store to the size the canvas is actually displayed at,
-  // scaled by the device pixel ratio. Without this the browser stretches a
-  // fixed-size bitmap to fit the box and the grid lines go soft; with it the
-  // arena is sharp at any window size and the tiles stay square.
+  // Fits the board to the space its container actually has.
+  //
+  // This is done here rather than in CSS because CSS could not be made to do
+  // it: a canvas has an intrinsic size, and combined with aspect-ratio that
+  // made percentage max-height a no-op, so the board kept rendering at full
+  // size and ran off the bottom of short windows.
+  //
+  // Measuring the PARENT rather than the canvas also matters. Measuring the
+  // canvas fed its own size back into the next measurement and the board crept
+  // a couple of pixels larger every frame.
   resize() {
-    const rect = this.canvas.getBoundingClientRect?.();
+    const parent = this.canvas.parentElement;
     const dpr = globalThis.devicePixelRatio || 1;
 
-    // Before first layout the box can measure zero, so fall back to the
-    // canvas's declared size rather than dividing by nothing.
-    const cssW = rect?.width || this.canvas.width || GRID_W * 60;
-    const cssH = rect?.height || this.canvas.height || GRID_H * 60;
+    // clientWidth/Height exclude borders and scrollbars, which is exactly the
+    // space available. Before first layout they are 0, so fall back.
+    const availW = parent?.clientWidth || DEFAULT_TILE * GRID_W;
+    const availH = parent?.clientHeight || DEFAULT_TILE * GRID_H;
 
-    const w = Math.max(1, Math.round(cssW * dpr));
-    const h = Math.max(1, Math.round(cssH * dpr));
+    // One tile size for both axes keeps tiles square; flooring keeps the grid
+    // on whole pixels so the lines stay crisp.
+    const tile = Math.max(MIN_TILE, Math.floor(Math.min(availW / GRID_W, availH / GRID_H)));
+    const cssW = tile * GRID_W;
+    const cssH = tile * GRID_H;
+
+    // Explicit CSS size, so nothing is left to intrinsic sizing.
+    if (this.canvas.style) {
+      this.canvas.style.width = `${cssW}px`;
+      this.canvas.style.height = `${cssH}px`;
+    }
+
+    const w = Math.round(cssW * dpr);
+    const h = Math.round(cssH * dpr);
     if (this.canvas.width !== w) this.canvas.width = w;
     if (this.canvas.height !== h) this.canvas.height = h;
 
-    this.tile = Math.floor(Math.min(w / GRID_W, h / GRID_H));
+    this.cssTile = tile;
+    this.tile = Math.floor(tile * dpr);
     this.ox = Math.floor((w - this.tile * GRID_W) / 2);
     this.oy = Math.floor((h - this.tile * GRID_H) / 2);
     return this;
