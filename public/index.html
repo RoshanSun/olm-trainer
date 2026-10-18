@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Olm Trainer</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="bar">
+  <h1>Olm Trainer</h1>
+  <div class="bar-controls">
+    <label>Drill
+      <select id="mode">
+        <option value="full">Full solo kill</option>
+        <option value="head">Head phase only</option>
+        <option value="prayer">Prayer only (no DPS race)</option>
+        <option value="burst">Crystal burst only</option>
+      </select>
+    </label>
+    <label>Gear
+      <select id="loadout"></select>
+    </label>
+    <label>Seed
+      <input id="seed" type="text" value="olm" size="8">
+    </label>
+    <label class="check"><input id="cm" type="checkbox"> Challenge Mode</label>
+    <button id="start" class="primary">Start</button>
+    <button id="pause">Pause</button>
+  </div>
+</header>
+
+<main>
+  <section class="stage">
+    <canvas id="arena" width="780" height="720"></canvas>
+    <div id="banner" class="banner" hidden></div>
+  </section>
+
+  <aside class="side">
+    <div class="panel" id="vitals">
+      <div class="vital">
+        <span class="label">Hitpoints</span>
+        <div class="meter"><i id="hp-bar"></i></div>
+        <span class="num" id="hp-num">99</span>
+      </div>
+      <div class="vital">
+        <span class="label">Prayer</span>
+        <div class="meter prayer"><i id="pray-bar"></i></div>
+        <span class="num" id="pray-num">99</span>
+      </div>
+      <div class="vital">
+        <span class="label">Run</span>
+        <div class="meter energy"><i id="energy-bar"></i></div>
+        <span class="num" id="energy-num">100</span>
+      </div>
+      <div class="supplies">
+        <button id="brew" class="supply">Brew <b id="brew-n">20</b><kbd>1</kbd></button>
+        <button id="restore" class="supply">Restore <b id="restore-n">8</b><kbd>2</kbd></button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Overhead prayer</div>
+      <div class="prayers">
+        <button class="pray" data-pray="magic">Magic<kbd>Q</kbd></button>
+        <button class="pray" data-pray="missiles">Missiles<kbd>W</kbd></button>
+        <button class="pray" data-pray="melee">Melee<kbd>E</kbd></button>
+      </div>
+      <div class="hint" id="pray-hint">Olm is using <b>magic</b>.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Target</div>
+      <div class="targets">
+        <button class="target" data-target="mageHand">Mage hand<kbd>A</kbd></button>
+        <button class="target" data-target="meleeHand">Melee hand<kbd>S</kbd></button>
+        <button class="target" data-target="head">Head<kbd>D</kbd></button>
+      </div>
+      <div class="bars" id="olm-bars"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Rotation <span class="sub" id="phase-label">Phase 1</span></div>
+      <ol class="rotation" id="rotation"></ol>
+      <div class="hint">Olm acts every 4 ticks. Specials land on fixed steps &mdash; count, don't react.</div>
+    </div>
+
+    <div class="panel log">
+      <div class="panel-title">Combat log</div>
+      <ul id="log"></ul>
+    </div>
+  </aside>
+</main>
+
+<div class="footer">
+  <span><kbd>click</kbd> move</span>
+  <span><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> prayers</span>
+  <span><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> target</span>
+  <span><kbd>1</kbd><kbd>2</kbd> brew / restore</span>
+  <span><kbd>R</kbd> run</span>
+  <span><kbd>Space</kbd> pause</span>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

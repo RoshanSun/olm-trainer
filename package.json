@@ -1,0 +1,17 @@
+{
+  "name": "olm-trainer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tick-accurate single-player practice simulator for the Great Olm, final boss of the Chambers of Xeric raid in Old School RuneScape.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "build": "node scripts/build-static.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

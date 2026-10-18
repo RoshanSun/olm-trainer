@@ -1,0 +1,15 @@
+# dependencies
+node_modules/
+
+# logs and runtime junk
+*.log
+npm-debug.log*
+
+# editors
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# static build output
+dist/
